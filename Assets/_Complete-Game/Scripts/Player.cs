@@ -11,22 +11,23 @@ public class Player : MovingObject
     private int health;                         //Used to store player health points total during level.
     public static Vector2 position;
 
+    public bool onWorldBoard;
+    public bool dungeonTransition;
 
-    //Start overrides the Start function of MovingObject
+
     protected override void Start()
     {
-        //Get a component reference to the Player's animator component
         animator = GetComponent<Animator>();
 
-        //Get the current health point total stored in GameManager.instance between levels.
         health = GameManager.instance.healthPoints;
 
-        //Set the healthText to reflect the current player health total.
         healthText.text = "Health: " + health;
 
         position.x = position.y = 2;
 
-        //Call the Start function of the MovingObject base class.
+        onWorldBoard = true;
+        dungeonTransition = false;
+
         base.Start();
     }
 
@@ -52,18 +53,28 @@ public class Player : MovingObject
             vertical = 0;
         }
 
-        //Check if we have a non-zero value for horizontal or vertical
         if (horizontal != 0 || vertical != 0)
         {
-            //Call AttemptMove passing in the generic parameter Wall, since that is what Player may interact with if they encounter one (by attacking it)
-            //Pass in horizontal and vertical as parameters to specify the direction to move Player in.
-            canMove = AttemptMove<Wall>(horizontal, vertical);
-            if (canMove)
+            if(!dungeonTransition)
             {
-                position.x += horizontal;
-                position.y += vertical;
-                GameManager.instance.updateBoard(horizontal, vertical);
+                canMove = AttemptMove<Wall>(horizontal, vertical);
+                if (canMove && onWorldBoard)
+                {
+                    position.x += horizontal;
+                    position.y += vertical;
+                    GameManager.instance.updateBoard(horizontal, vertical);
+                }
             }
+        }
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if(collision.tag == "Exit")
+        {
+            dungeonTransition = true;
+            Invoke("GoDungeonPortal", 0.5f);
+            Destroy(collision.gameObject);
         }
     }
 
@@ -121,6 +132,22 @@ public class Player : MovingObject
         {
             //Call the GameOver function of GameManager.
             GameManager.instance.GameOver();
+        }
+    }
+
+    private void GoDungeonPortal()
+    {
+        if(onWorldBoard)
+        {
+            onWorldBoard = false;
+            GameManager.instance.enterDungeon();
+            transform.position = DungeonManager.startPos;
+        }
+        else
+        {
+            onWorldBoard = true;
+            GameManager.instance.exitDungeon();
+            transform.position = position;
         }
     }
 }
