@@ -27,6 +27,7 @@ public class BoardManager : MonoBehaviour
     public GameObject[] floorTiles;
     public GameObject[] wallTiles;
     public GameObject[] outerWallTiles;
+    public GameObject chestTile;
 
     public GameObject exit;
 
@@ -79,7 +80,7 @@ public class BoardManager : MonoBehaviour
                 instance.transform.SetParent(boardHolder);
             }
 
-            if(Random.Range(0, 100) == 1)
+            if(Random.Range(0, 30) == 1)
             {
                 toInstantiate = exit;
                 instance = Instantiate(toInstantiate, new Vector3(tileToAdd.x, tileToAdd.y, 0f), Quaternion.identity) as GameObject;
@@ -99,6 +100,13 @@ public class BoardManager : MonoBehaviour
             toInstantiate = floorTiles[Random.Range(0, floorTiles.Length)];
             instance = Instantiate(toInstantiate, new Vector3(tile.Key.x, tile.Key.y, 0f), Quaternion.identity) as GameObject;
             instance.transform.SetParent(dungeonBoardHolder);
+
+            if(tile.Value == TileType.chest)
+            {
+                toInstantiate = chestTile;
+                instance = Instantiate(toInstantiate, new Vector3(tile.Key.x, tile.Key.y, 0f), Quaternion.identity) as GameObject;
+                instance.transform.SetParent(dungeonBoardHolder);
+            }
         }
 
         for(int x = -1; x < bound + 1; x++)

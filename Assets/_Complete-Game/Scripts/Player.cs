@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
-using UnityEngine.UI;	//Allows us to use UI.
+using UnityEngine.UI;
+using System.Collections.Generic;	//Allows us to use UI.
 
 //Player inherits from MovingObject, our base class for objects that can move, Enemy also inherits from this.
 public class Player : MovingObject
@@ -14,6 +15,13 @@ public class Player : MovingObject
     public bool onWorldBoard;
     public bool dungeonTransition;
 
+    private Weapon weapon;
+    public Image weaponComp1, weaponComp2, weaponComp3;
+    public Image gloves;
+    public Image boot;
+
+    public int attackMod = 0, defenseMod = 0;
+    private Dictionary<string, Item> inventory;
 
     protected override void Start()
     {
@@ -27,6 +35,8 @@ public class Player : MovingObject
 
         onWorldBoard = true;
         dungeonTransition = false;
+
+        inventory = new Dictionary<string, Item>();
 
         base.Start();
     }
@@ -57,7 +67,14 @@ public class Player : MovingObject
         {
             if(!dungeonTransition)
             {
-                canMove = AttemptMove<Wall>(horizontal, vertical);
+                if (onWorldBoard)
+                {
+                    canMove = AttemptMove<Wall>(horizontal, vertical);
+                }
+                else
+                {
+                    canMove = AttemptMove<Chest>(horizontal, vertical);
+                }
                 if (canMove && onWorldBoard)
                 {
                     position.x += horizontal;
@@ -75,6 +92,33 @@ public class Player : MovingObject
             dungeonTransition = true;
             Invoke("GoDungeonPortal", 0.5f);
             Destroy(collision.gameObject);
+        }
+        else if(collision.tag == "Food" || collision.tag == "Soda")
+        {
+            UpdateHealth(collision);
+            Destroy(collision.gameObject);
+        }
+        else if(collision.tag == "Item")
+        {
+            UpdateInventory(collision);
+            Destroy(collision.gameObject);
+        }
+        else if(collision.tag == "Weapon")
+        {
+            if(weapon)
+            {
+                Destroy(transform.GetChild(0).gameObject);
+            }
+            collision.enabled = false;
+            collision.transform.parent = transform;
+            weapon = collision.GetComponent<Weapon>();
+            weapon.AcquireWeapon();
+            weapon.inPlayerInventory = true;
+            weapon.enableSpriteRenderer(false);
+            wallDamage = attackMod + 3;
+            weaponComp1.sprite = weapon.getComponentImage(0);
+            weaponComp2.sprite = weapon.getComponentImage(1);
+            weaponComp3.sprite = weapon.getComponentImage(2);
         }
     }
 
@@ -96,13 +140,20 @@ public class Player : MovingObject
     //It takes a generic parameter T which in the case of Player is a Wall which the player can attack and destroy.
     protected override void OnCantMove<T>(T component)
     {
-        //Set hitWall to equal the component passed in as a parameter.
-        Wall hitWall = component as Wall;
-
-        //Call the DamageWall function of the Wall we are hitting.
-        hitWall.DamageWall(wallDamage);
-
-        //Set the attack trigger of the player's animation controller in order to play the player's attack animation.
+        if(typeof(T) == typeof(Wall))
+        {
+            Wall hitWall = component as Wall;
+            hitWall.DamageWall(wallDamage);
+        }
+        else if(typeof(T) == typeof(Chest))
+        {
+            Chest hitChest = component as Chest;
+            hitChest.Open();
+        }
+        if(weapon)
+        {
+            weapon.useWeapon();
+        }
         animator.SetTrigger("playerChop");
     }
 
@@ -148,6 +199,66 @@ public class Player : MovingObject
             onWorldBoard = true;
             GameManager.instance.exitDungeon();
             transform.position = position;
+        }
+    }
+    private void UpdateHealth(Collider2D item)
+    {
+        if (health < 100)
+        {
+            if (item.tag == "Food")
+            {
+                health += Random.Range(1, 4);
+            }
+            else
+            {
+                health += Random.Range(4, 11);
+            }
+            GameManager.instance.healthPoints = health;
+            healthText.text = "Health: " + health;
+        }
+    }
+
+    private void UpdateInventory(Collider2D item)
+    {
+        Item itemData = item.GetComponent<Item>();
+        switch(itemData.type)
+        {
+            case itemType.glove:
+                if(!inventory.ContainsKey("glove"))
+                {
+                    inventory.Add("glove", itemData);
+                }
+                else
+                {
+                    inventory["glove"] = itemData;
+                }
+                gloves.color = itemData.level;
+                break;
+            case itemType.boot:
+                if(!inventory.ContainsKey("boot"))
+                {
+                    inventory.Add("boot", itemData);
+                }
+                else
+                {
+                    inventory["boot"] = itemData;
+                }
+                boot.color = itemData.level;
+                break;
+        }
+
+        attackMod = 0;
+        defenseMod = 0;
+
+        foreach(var gear in inventory)
+        {
+            attackMod += gear.Value.attackMod;
+            defenseMod += gear.Value.defenseMod;
+        }
+
+        if(weapon)
+        {
+            wallDamage = attackMod + 3;
         }
     }
 }
