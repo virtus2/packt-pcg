@@ -6,6 +6,7 @@ using System.Collections.Generic;	//Allows us to use UI.
 //Player inherits from MovingObject, our base class for objects that can move, Enemy also inherits from this.
 public class Player : MovingObject
 {
+    public static bool isFacingRight;
     public int wallDamage = 1;                  //How much damage a player does to a wall when chopping it.
     public Text healthText;                     //UI Text to display current player health total.
     private Animator animator;                  //Used to store a reference to the Player's animator component.
@@ -67,14 +68,31 @@ public class Player : MovingObject
         {
             if(!dungeonTransition)
             {
-                if (onWorldBoard)
+                Vector2 start = transform.position;
+                Vector2 end = start + new Vector2(horizontal, vertical);
+                base.boxCollider.enabled = false;
+                RaycastHit2D hit = Physics2D.Linecast(start, end, base.blockingLayer);
+                base.boxCollider.enabled = true;
+                if (hit.transform != null)
                 {
-                    canMove = AttemptMove<Wall>(horizontal, vertical);
+                    switch (hit.transform.gameObject.tag)
+                    {
+                        case "Wall":
+                            canMove = AttemptMove<Wall>(horizontal, vertical);
+                            break;
+                        case "Chest":
+                            canMove = AttemptMove<Chest>(horizontal, vertical);
+                            break;
+                        case "Enemy":
+                            canMove = AttemptMove<Enemy>(horizontal, vertical);
+                            break;
+                    }
                 }
                 else
                 {
-                    canMove = AttemptMove<Chest>(horizontal, vertical);
+                    canMove = AttemptMove<Wall>(horizontal, vertical);
                 }
+
                 if (canMove && onWorldBoard)
                 {
                     position.x += horizontal;
@@ -126,6 +144,14 @@ public class Player : MovingObject
     //AttemptMove takes a generic parameter T which for Player will be of the type Wall, it also takes integers for x and y direction to move in.
     protected override bool AttemptMove<T>(int xDir, int yDir)
     {
+        if(xDir == 1 && !isFacingRight)
+        {
+            isFacingRight = true;
+        }
+        else if (xDir == -1 && isFacingRight)
+        {
+            isFacingRight = false;
+        }
         //Call the AttemptMove method of the base class, passing in the component T (in this case Wall) and x and y direction to move.
         bool hit = base.AttemptMove<T>(xDir, yDir);
 
@@ -149,6 +175,11 @@ public class Player : MovingObject
         {
             Chest hitChest = component as Chest;
             hitChest.Open();
+        }
+        else if(typeof(T) == typeof(Enemy))
+        {
+            Enemy enemy = component as Enemy;
+            enemy.DamageEnemy(wallDamage);
         }
         if(weapon)
         {

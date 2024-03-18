@@ -1,7 +1,8 @@
 ﻿using UnityEngine;
 using System;
 using System.Collections.Generic; 		//Allows us to use Lists.
-using Random = UnityEngine.Random;      //Tells Random to use the Unity Engine random number generator.
+using Random = UnityEngine.Random;
+using Completed;      //Tells Random to use the Unity Engine random number generator.
 
 
 public class BoardManager : MonoBehaviour
@@ -30,6 +31,7 @@ public class BoardManager : MonoBehaviour
     public GameObject chestTile;
 
     public GameObject exit;
+    public GameObject enemy;
 
     private Dictionary<Vector2, Vector2> dungeonGridPositions;
     private Transform dungeonBoardHolder;
@@ -86,6 +88,12 @@ public class BoardManager : MonoBehaviour
                 instance = Instantiate(toInstantiate, new Vector3(tileToAdd.x, tileToAdd.y, 0f), Quaternion.identity) as GameObject;
                 instance.transform.SetParent(boardHolder);
             }
+            else if(Random.Range(0, GameManager.instance.enemySpawnRatio) == 1)
+            {
+                toInstantiate = enemy;
+                instance = Instantiate(toInstantiate, new Vector3(tileToAdd.x, tileToAdd.y, 0f), Quaternion.identity) as GameObject;
+                instance.transform.SetParent(boardHolder);
+            }
         }
     }
 
@@ -104,6 +112,12 @@ public class BoardManager : MonoBehaviour
             if(tile.Value == TileType.chest)
             {
                 toInstantiate = chestTile;
+                instance = Instantiate(toInstantiate, new Vector3(tile.Key.x, tile.Key.y, 0f), Quaternion.identity) as GameObject;
+                instance.transform.SetParent(dungeonBoardHolder);
+            }
+            else if(tile.Value == TileType.enemy)
+            {
+                toInstantiate = enemy;
                 instance = Instantiate(toInstantiate, new Vector3(tile.Key.x, tile.Key.y, 0f), Quaternion.identity) as GameObject;
                 instance.transform.SetParent(dungeonBoardHolder);
             }
@@ -131,6 +145,14 @@ public class BoardManager : MonoBehaviour
     {
         Destroy(dungeonBoardHolder.gameObject);
         boardHolder.gameObject.SetActive(true);
+    }
+    public bool checkValidTile(Vector2 pos)
+    {
+        if (gridPositions.ContainsKey(pos))
+        {
+            return true;
+        }
+        return false;
     }
 
     public void addToBoard(int horizontal, int vertical)

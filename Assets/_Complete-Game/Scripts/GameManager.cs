@@ -7,16 +7,20 @@ using Completed;
 
 public class GameManager : MonoBehaviour
 {
-    public float turnDelay = 0.1f;                          //Delay between each Player turn.
-    public int healthPoints = 100;                          //Starting value for Player health points.
-    public static GameManager instance = null;              //Static instance of GameManager which allows it to be accessed by any other script.
-    [HideInInspector] public bool playersTurn = true;       //Boolean to check if it's players turn, hidden in inspector but public.
+    public float turnDelay = 0.1f;
+    public int healthPoints = 100;
+    public static GameManager instance = null;
+    [HideInInspector] public bool playersTurn = true;
+
+    public int enemySpawnRatio = 20;
 
     private BoardManager boardScript;
     private DungeonManager dungeonScript;
     private Player playerScript;
-    private List<Enemy> enemies;                            //List of all Enemy units, used to issue them move commands.
-    private bool enemiesMoving;                             //Boolean to check if enemies are moving.
+    private List<Enemy> enemies;
+    private bool enemiesMoving;
+
+    private bool playerInDungeon;
 
     //Awake is always called before any Start functions
     void Awake()
@@ -48,11 +52,9 @@ public class GameManager : MonoBehaviour
     //Initializes the game for each level.
     void InitGame()
     {
-        //Clear any Enemy objects in our List to prepare for next level.
         enemies.Clear();
-
-        //Call the SetupScene function of the BoardManager script, pass it current level number.
         boardScript.BoardSetup();
+        playerInDungeon = false;
     }
 
     //Update is called every frame.
@@ -78,23 +80,50 @@ public class GameManager : MonoBehaviour
     //Coroutine to move enemies in sequence.
     IEnumerator MoveEnemies()
     {
-        //While enemiesMoving is true player is unable to move.
         enemiesMoving = true;
 
-        //Wait for turnDelay seconds, defaults to .1 (100 ms).
         yield return new WaitForSeconds(turnDelay);
 
-        //If there are no enemies spawned (IE in first level):
         if (enemies.Count == 0)
         {
-            //Wait for turnDelay seconds between moves, replaces delay caused by enemies moving when there are none.
             yield return new WaitForSeconds(turnDelay);
         }
+        List<Enemy> enemiesToDestroy = new List<Enemy>();
 
+        for (int i = 0; i < enemies.Count; i++)
+        {
+            if (playerInDungeon)
+            {
+                if (!enemies[i].getSpriteRenderer().isVisible)
+                {
+                    if (i == enemies.Count - 1)
+                        yield return new WaitForSeconds(enemies[i].moveTime);
+                    continue;
+                }
+            }
+            else
+            {
+                if ((!enemies[i].getSpriteRenderer().isVisible) || (!boardScript.checkValidTile(enemies[i].transform.position)))
+                {
+                    enemiesToDestroy.Add(enemies[i]);
+                    continue;
+                }
+            }
+
+            enemies[i].MoveEnemy();
+
+            yield return new WaitForSeconds(enemies[i].moveTime);
+        }
         playersTurn = true;
 
-        //Enemies are done moving, set enemiesMoving to false.
         enemiesMoving = false;
+
+        for (int i = 0; i < enemiesToDestroy.Count; i++)
+        {
+            enemies.Remove(enemiesToDestroy[i]);
+            Destroy(enemiesToDestroy[i].gameObject);
+        }
+        enemiesToDestroy.Clear();
     }
 
     public void updateBoard(int horizantal, int vertical)
@@ -107,11 +136,29 @@ public class GameManager : MonoBehaviour
         dungeonScript.StartDungeon();
         boardScript.SetDungeonBoard(dungeonScript.gridPositions, dungeonScript.maxBound, dungeonScript.endPos);
         playerScript.dungeonTransition = false;
+        playerInDungeon = true;
+        for(int i=0; i<enemies.Count; i++)
+        {
+            Destroy(enemies[i].gameObject);
+        }
+        enemies.Clear();
     }
 
     public void exitDungeon()
     {
         boardScript.SetWorldBoard();
         playerScript.dungeonTransition = false;
+        playerInDungeon = false;
+        enemies.Clear();
+    }
+
+    public void AddEnemyToList(Enemy enemy)
+    {
+        enemies.Add(enemy);
+    }
+
+    public void RemoveEnemyFromList(Enemy enemy)
+    {
+        enemies.Remove(enemy);
     }
 }
