@@ -120,6 +120,7 @@ public class Player : MovingObject
         {
             UpdateInventory(collision);
             Destroy(collision.gameObject);
+            AdaptDifficulty();
         }
         else if(collision.tag == "Weapon")
         {
@@ -137,6 +138,7 @@ public class Player : MovingObject
             weaponComp1.sprite = weapon.getComponentImage(0);
             weaponComp2.sprite = weapon.getComponentImage(1);
             weaponComp3.sprite = weapon.getComponentImage(2);
+            AdaptDifficulty();
         }
     }
 
@@ -291,6 +293,16 @@ public class Player : MovingObject
         {
             wallDamage = attackMod + 3;
         }
+    }
+
+    private void AdaptDifficulty()
+    {
+        if (wallDamage >= 10)
+            GameManager.instance.enemiesSmarter = true;
+        if (wallDamage >= 15)
+            GameManager.instance.enemiesFaster = true;
+        if (wallDamage >= 20)
+            GameManager.instance.enemySpawnRatio = 10;
     }
 }
 

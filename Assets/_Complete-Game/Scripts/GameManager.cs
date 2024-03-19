@@ -12,6 +12,8 @@ public class GameManager : MonoBehaviour
     public static GameManager instance = null;
     [HideInInspector] public bool playersTurn = true;
 
+    public bool enemiesFaster = false;
+    public bool enemiesSmarter = false;
     public int enemySpawnRatio = 20;
 
     private BoardManager boardScript;

@@ -26,7 +26,7 @@ public class Enemy : MovingObject
 
     protected override bool AttemptMove<T>(int xDir, int yDir)
     {
-        if (skipMove)
+        if (skipMove && !GameManager.instance.enemiesFaster)
         {
             skipMove = false;
             return false;
@@ -41,10 +41,61 @@ public class Enemy : MovingObject
     {
         int xDir = 0;
         int yDir = 0;
-        if (Mathf.Abs(target.position.x - transform.position.x) < float.Epsilon)
-            yDir = target.position.y > transform.position.y ? 1 : -1;
+        if(GameManager.instance.enemiesSmarter)
+        {
+            int xHeading = (int)target.position.x - (int)transform.position.x;
+            int yHeading = (int)target.position.y - (int)transform.position.y;
+            bool moveOnX = Mathf.Abs(xHeading) >= Mathf.Abs(yHeading);
+            for(int attempt = 0; attempt<2; attempt++)
+            {
+                if(moveOnX && xHeading < 0)
+                {
+                    xDir = -1;
+                    yDir = 0;
+                }
+                else if(moveOnX && xHeading > 0)
+                {
+                    xDir = 1;
+                    yDir = 0;
+                }
+                else if(!moveOnX && yHeading < 0)
+                {
+                    xDir = 0;
+                    yDir = -1;
+                }
+                else if(!moveOnX && yHeading > 0)
+                {
+                    xDir = 0;
+                    yDir = 1;
+                }
+                Vector2 start = transform.position;
+                Vector2 end = start + new Vector2(xDir, yDir);
+                base.boxCollider.enabled = false;
+                RaycastHit2D hit = Physics2D.Linecast(start, end, base.blockingLayer);
+                base.boxCollider.enabled = true;
+                if (hit.transform != null)
+                {
+                    if (hit.transform.gameObject.tag == "Wall" || hit.transform.gameObject.tag == "Chest")
+                    {
+                        if (moveOnX == true)
+                            moveOnX = false;
+                        else
+                            moveOnX = true;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+        }
         else
-            xDir = target.position.x > transform.position.x ? 1 : -1;
+        {
+            if (Mathf.Abs(target.position.x - transform.position.x) < float.Epsilon)
+                yDir = target.position.y > transform.position.y ? 1 : -1;
+            else
+                xDir = target.position.x > transform.position.x ? 1 : -1;
+        }
 
         AttemptMove<Player>(xDir, yDir);
     }
